@@ -12,7 +12,7 @@ cases = [
 
 
 class Test(TestCase):
-    def test_map_to_output(self):
-        for input, steering in cases:
-            with self.subTest(str(input) + " => " + str(steering)):
-                self.assertEqual(map_to_steering(input), steering)
+    def test_map_to_steering(self):
+        for wheel_rotation, steering in cases:
+            with self.subTest(str(wheel_rotation) + " => " + str(steering)):
+                self.assertEqual(map_to_steering(wheel_rotation), steering)
