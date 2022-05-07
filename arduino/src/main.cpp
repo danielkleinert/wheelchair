@@ -1,48 +1,60 @@
 #include <Arduino.h>
-#include <EnableInterrupt.h>
 
-const volatile long SAMPLING_RATE = 10;
-const volatile long DEBOUNCE_MILLIS = 2;
-const volatile int LEFT = 0;
-const volatile int RIGHT = 1;
-const volatile int CLK_PIN[2] = {3, 5};
-const volatile int DATA_PIN[2] = {2, 4};
+const long SAMPLING_RATE = 10;
+const long SAMPLING_INTERVAL = 1000 / SAMPLING_RATE;
 
-volatile int ticks[2] = {0, 0};
-volatile unsigned long lastChanged[2] = {0, 0};
+const int LEFT = 0;
+const int RIGHT = 1;
+const int CLK_PIN[2] = {3, 5};
+const int DATA_PIN[2] = {2, 4};
 
-void stepped(int wheelIndex) {
-    const unsigned long currentMillis = millis();
-    if (lastChanged[wheelIndex] + DEBOUNCE_MILLIS > currentMillis) return;
-    const int direction_rectifier = wheelIndex ? 1 : -1; // forward is different as axles point in opposite directions
-    ticks[wheelIndex] += (digitalRead(DATA_PIN[wheelIndex]) ? 1 : -1) * direction_rectifier;
-    lastChanged[wheelIndex] = currentMillis;
-}
-
-void steppedLeft() {
-    stepped(LEFT);
-}
-
-void steppedRight() {
-    stepped(RIGHT);
-}
+static uint8_t prevNextCode[] = {0,0};
+static uint16_t store[] = {0,0};
+int ticks[2] = {0, 0};
+unsigned long lastUpdate = millis();
 
 void setup() {
     pinMode(DATA_PIN[LEFT], INPUT_PULLUP);
     pinMode(CLK_PIN[LEFT], INPUT_PULLUP);
-    enableInterrupt(CLK_PIN[LEFT], steppedLeft, FALLING);    pinMode(DATA_PIN[LEFT], INPUT_PULLUP);
     pinMode(DATA_PIN[RIGHT], INPUT_PULLUP);
     pinMode(CLK_PIN[RIGHT], INPUT_PULLUP);
-    enableInterrupt(CLK_PIN[RIGHT], steppedRight, FALLING);
-
     Serial.begin(57600);
 }
 
-void loop() {
+
+// https://www.best-microcontroller-projects.com/rotary-encoder.html
+int8_t read_rotary(int wheelIndex) {
+    static int8_t rot_enc_table[] = {0,1,1,0,1,0,0,1,1,0,0,1,0,1,1,0};
+
+    prevNextCode[wheelIndex] <<= 2;
+    if (digitalRead(DATA_PIN[wheelIndex])) prevNextCode[wheelIndex] |= 0x02;
+    if (digitalRead(CLK_PIN[wheelIndex])) prevNextCode[wheelIndex] |= 0x01;
+    prevNextCode[wheelIndex] &= 0x0f;
+
+    // If valid then store as 16 bit data.
+    if  (rot_enc_table[prevNextCode[wheelIndex]] ) {
+        store[wheelIndex] <<= 4;
+        store[wheelIndex] |= prevNextCode[wheelIndex];
+        if ((store[wheelIndex]&0xff)==0x2b) return -1;
+        if ((store[wheelIndex]&0xff)==0x17) return 1;
+    }
+    return 0;
+}
+
+void send() {
     Serial.print(ticks[LEFT]);
     Serial.print(",");
     Serial.println(ticks[RIGHT]);
     ticks[LEFT] = ticks[RIGHT] = 0;
-    delay(1000/SAMPLING_RATE);
 }
 
+void loop() {
+    ticks[LEFT] += read_rotary(LEFT);
+    ticks[RIGHT] += read_rotary(RIGHT);
+
+    unsigned long now = millis();
+    if (lastUpdate + SAMPLING_INTERVAL < now) {
+        send();
+        lastUpdate = now;
+    }
+}
