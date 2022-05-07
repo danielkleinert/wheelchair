@@ -1,79 +1,48 @@
 #include <Arduino.h>
 #include <EnableInterrupt.h>
-#define NUM_TRIGGERS 10
 
-volatile long lastChanged = 0;
-const volatile long debounceMillis = 2;
-const volatile long movementTimeoutMillis = 150;
-volatile bool stopped = false;
+const volatile long SAMPLING_RATE = 10;
+const volatile long DEBOUNCE_MILLIS = 2;
+const volatile int LEFT = 0;
+const volatile int RIGHT = 1;
+const volatile int CLK_PIN[2] = {3, 5};
+const volatile int DATA_PIN[2] = {2, 4};
 
-struct Trigger {
-    Trigger()
-            : milliSeconds(milliSeconds)
-            , dir(true)
-    { }
-    Trigger(long milliSeconds, bool dir)
-            : milliSeconds(milliSeconds)
-            , dir(dir)
-    { }
-    long milliSeconds;
-    bool dir;
-};
+volatile int ticks[2] = {0, 0};
+volatile unsigned long lastChanged[2] = {0, 0};
 
-Trigger triggers[NUM_TRIGGERS] = {};
-int triggerIndex = 0;
-
-float getSpeed() {
-    int directionCounter = 0;
-    for (int i = 0; i < NUM_TRIGGERS; i++) {
-        directionCounter += triggers[i].dir ? 1 : -1;
-    }
-    const long firstTriggerTime = triggers[(triggerIndex + 1) % NUM_TRIGGERS].milliSeconds;
-    const long dur = millis() - firstTriggerTime;
-    const float speed = 1000.0f / dur;
-    return speed * (directionCounter < 0 ? 1.0f : -1.0f);
+void stepped(int wheelIndex) {
+    const unsigned long currentMillis = millis();
+    if (lastChanged[wheelIndex] + DEBOUNCE_MILLIS > currentMillis) return;
+    const int direction_rectifier = wheelIndex ? 1 : -1; // forward is different as axles point in opposite directions
+    ticks[wheelIndex] += (digitalRead(DATA_PIN[wheelIndex]) ? 1 : -1) * direction_rectifier;
+    lastChanged[wheelIndex] = currentMillis;
 }
 
+void steppedLeft() {
+    stepped(LEFT);
+}
 
-void stepped() {
-    const int dir = digitalRead(2);
-    const long currentMillis = millis();
-    if (lastChanged + debounceMillis > currentMillis) return;
-
-    //Serial.println(dir);
-    if (triggerIndex % 2 == 0) {
-        Serial.println((int) ceil(getSpeed()));
-    }
-    lastChanged = millis();
-
-    triggers[triggerIndex] = Trigger(currentMillis, dir);
-    triggerIndex = (triggerIndex + 1) % NUM_TRIGGERS;
-    stopped = false;
+void steppedRight() {
+    stepped(RIGHT);
 }
 
 void setup() {
-    pinMode(2, INPUT_PULLUP);
-    pinMode(3, INPUT_PULLUP);
-
-    enableInterrupt(3, stepped, FALLING);
+    pinMode(DATA_PIN[LEFT], INPUT_PULLUP);
+    pinMode(CLK_PIN[LEFT], INPUT_PULLUP);
+    enableInterrupt(CLK_PIN[LEFT], steppedLeft, FALLING);    pinMode(DATA_PIN[LEFT], INPUT_PULLUP);
+    pinMode(DATA_PIN[RIGHT], INPUT_PULLUP);
+    pinMode(CLK_PIN[RIGHT], INPUT_PULLUP);
+    enableInterrupt(CLK_PIN[RIGHT], steppedRight, FALLING);
 
     Serial.begin(57600);
-    Serial.println("start");
 }
 
 void loop() {
-    if (!stopped)
-    {
-        const long currentMillis = millis();
-        if (lastChanged + movementTimeoutMillis < currentMillis) {
-            Serial.println("0");
-            lastChanged = currentMillis;
-            stopped = true;
-            for (int i = 0; i < NUM_TRIGGERS; i++) {
-                triggers[i] = Trigger(currentMillis - 100, i % 2 == 0);
-            }
-        }
-    }
-    delay(10);
+    Serial.print(ticks[LEFT]);
+    Serial.print(",");
+    Serial.println(ticks[RIGHT]);
+    ticks[LEFT] = ticks[RIGHT] = 0;
+    delay(1000/SAMPLING_RATE);
 }
 
