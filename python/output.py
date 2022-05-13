@@ -18,12 +18,8 @@ class KeyboardOutput:
         self.keyboard = Controller()
         self.forward = 0
         self.lastForwardTime = datetime.now()
-        self.release_times = {
-            'a': None,
-            'd': None,
-        }
-        for key in ['d', 'a']:
-            asyncio.create_task(self.check_key_up(key))
+        self.release_times = {}
+        asyncio.create_task(self.check_key_up())
 
     def send_control(self, steering: Steering):
         self.forward += steering.forward
@@ -43,19 +39,14 @@ class KeyboardOutput:
 
     def press(self, key: str, intensity: float):
         delta = timedelta(milliseconds=ROTATION_PRESS_TIME * intensity)
-        if self.release_times[key] is None:
+        if key not in self.release_times.get:
             self.keyboard.press(key)
         self.release_times[key] = datetime.now() + delta
 
-    async def check_key_up(self, key):
+    async def check_key_up(self):
         while True:
-            release_time = self.release_times[key]
-            if release_time is None:
-                await asyncio.sleep(1/120)
-                continue
-            wait_time = release_time - datetime.now()
-            if wait_time < timedelta(milliseconds=0):
-                self.keyboard.release(key)
-                self.release_times[key] = None
-            else:
-                await asyncio.sleep(wait_time.total_seconds())
+            for key in self.release_times.keys():
+                if self.release_times[key] < datetime.now():
+                    self.keyboard.release(key)
+                    del self.release_times[key]
+                await asyncio.sleep(1 / 120)
