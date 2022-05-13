@@ -3,11 +3,11 @@ from dataclasses import dataclass
 
 @dataclass
 class WheelRotation:
-    left: float
-    right: float
+    left: int
+    right: int
 
 
 @dataclass
 class Steering:
-    forward: float
-    right: float
+    forward: int
+    right: int
