@@ -41,11 +41,6 @@ class KeyboardOutput:
         if steering.right < 0:
             self.press('a', -steering.right)
 
-    @staticmethod
-    def get_forward_taps_and_rest(ticks, every=FORWARD_EVERY_X_TICKS):
-        a = divmod(ticks, int(math.copysign(every, ticks)))
-        return a
-
     def press(self, key: str, intensity: float):
         delta = timedelta(milliseconds=ROTATION_PRESS_TIME * intensity)
         if self.release_times[key] is None:
