@@ -1,52 +1,49 @@
 from datetime import datetime, timedelta
-import math
-from pynput.keyboard import Controller
+from pynput.keyboard import Key, Controller
 from data_types import Steering
+from blessings import Terminal
 import asyncio
 
 SAMPLING_RATE = 30
-FORWARD_EVERY_X_TICKS = 1000
-MAX_FORWARD_BUTTON_EVERY_SECS = 0.4
+DEADZONE = 10
 ROTATION_PRESS_TIME = (1 / SAMPLING_RATE) * 1.0
+FORWARD_PRESS_TIME = (1 / SAMPLING_RATE) * 0.9
+
+term = Terminal()
 
 
 class KeyboardOutput:
-    """ modulate forward/backward as times w/s pressed and left right as key-down time of a/d
-        for https://store.steampowered.com/app/871510/Wheelchair_Simulator/ """
 
     def __init__(self) -> None:
+        print(term.clear)
         self.keyboard = Controller()
-        self.forward = 0
-        self.lastForwardTime = datetime.now()
         self.release_times = {}
         asyncio.create_task(self.check_key_up())
 
     def send_control(self, steering: Steering):
-        self.forward += steering.forward
-        forward = abs(self.forward) > FORWARD_EVERY_X_TICKS
-        self.forward %= math.copysign(FORWARD_EVERY_X_TICKS, self.forward)
+        print(term.normal, term.move(0, 0), term.clear_eol, steering.forward, term.move(0, 8), steering.right)
+        if steering.forward > DEADZONE:
+            self.press('u', steering.forward * FORWARD_PRESS_TIME)
+        if steering.forward < -DEADZONE:
+            self.press('a', -steering.forward * FORWARD_PRESS_TIME)
+        if steering.right > DEADZONE:
+            self.press(Key.right, steering.right * ROTATION_PRESS_TIME)
+        if steering.right < -DEADZONE:
+            self.press(Key.left, -steering.right * ROTATION_PRESS_TIME)
 
-        if forward and self.lastForwardTime + timedelta(seconds=MAX_FORWARD_BUTTON_EVERY_SECS) < datetime.now():
-            self.lastForwardTime = datetime.now()
-            if self.forward > 0:
-                self.keyboard.tap('w')
-            if self.forward < 0:
-                self.keyboard.tap('s')
-        if steering.right > 0:
-            self.press('d', steering.right)
-        if steering.right < 0:
-            self.press('a', -steering.right)
-
-    def press(self, key: str, intensity: float):
-        delta = timedelta(milliseconds=ROTATION_PRESS_TIME * intensity)
-        if key not in self.release_times.get:
+    def press(self, key: str, time: float):
+        delta = timedelta(milliseconds=time)
+        if self.release_times.get(key, None) is None:
             self.keyboard.press(key)
         self.release_times[key] = datetime.now() + delta
 
     async def check_key_up(self):
         while True:
+            print(term.move(0, 1))
             for key in self.release_times.keys():
-                if self.release_times[key] < datetime.now():
+                release_time = self.release_times[key]
+                if release_time is not None and release_time < datetime.now():
                     self.keyboard.release(key)
-                    del self.release_times[key]
-                await asyncio.sleep(1 / 120)
+                    self.release_times[key] = None
+                print((term.on_blue if release_time else "") + f" {key} " + term.normal)
+            await asyncio.sleep(1 / 60)

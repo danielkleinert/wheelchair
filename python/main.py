@@ -7,6 +7,7 @@ from input import map_to_steering
 from output import KeyboardOutput
 from turtle_output import TurtleOutput
 
+
 TURTLE = False
 
 
@@ -20,7 +21,6 @@ async def main():
             (left, right) = ser_string.split(",")
             wheel_rotation = WheelRotation(int(left), int(right))
             steering = map_to_steering(wheel_rotation)
-            #print(wheel_rotation, steering)
             output.send_control(steering)
         except:
             print("Keyboard Interrupt")
