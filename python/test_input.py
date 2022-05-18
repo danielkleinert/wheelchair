@@ -5,7 +5,7 @@ from input import map_to_steering
 cases = [
     (WheelRotation(0, 0), Steering(0, 0)),
     (WheelRotation(100, 105), Steering(100, -5)),
-    (WheelRotation(-100, -105), Steering(-100, 5)),
+    (WheelRotation(-100, -105), Steering(-100, -5)),
     (WheelRotation(10, -10), Steering(0, 20)),
     (WheelRotation(-10, 1), Steering(0, -11)),
 ]
