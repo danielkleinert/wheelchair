@@ -4,6 +4,7 @@ from data_types import Steering
 import asyncio
 try:
     from blessings import Terminal
+    term = Terminal()
 except:
     pass
 
@@ -11,8 +12,6 @@ SAMPLING_RATE = 30
 DEADZONE = 10
 ROTATION_PRESS_TIME = (1 / SAMPLING_RATE) * 1.0
 FORWARD_PRESS_TIME = (1 / SAMPLING_RATE) * 0.9
-
-term = Terminal()
 
 
 class KeyboardOutput:
