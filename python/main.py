@@ -7,6 +7,7 @@ from data_types import WheelRotation
 from input import map_to_steering
 from output import KeyboardOutput
 from turtle_output import TurtleOutput
+import quick_load
 
 
 TURTLE = False
