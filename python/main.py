@@ -1,3 +1,4 @@
+import os
 import asyncio
 import serial_asyncio
 import serial
@@ -29,6 +30,10 @@ async def main():
 
 def get_arduino_port():
     comports = serial.tools.list_ports.comports()
+    if os.name == 'nt':  # Windows
+        if len(comports) == 0:
+            raise IOError("No Arduino found")
+        return comports[0]
     arduino_ports = [p.device for p in comports if p.manufacturer and 'Arduino' in p.manufacturer]
     if not arduino_ports:
         raise IOError("No Arduino found")
