@@ -33,7 +33,7 @@ def get_arduino_port():
     if os.name == 'nt':  # Windows
         if len(comports) == 0:
             raise IOError("No Arduino found")
-        return comports[0]
+        return comports[0].device
     arduino_ports = [p.device for p in comports if p.manufacturer and 'Arduino' in p.manufacturer]
     if not arduino_ports:
         raise IOError("No Arduino found")
