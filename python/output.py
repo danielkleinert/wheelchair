@@ -1,8 +1,11 @@
 from datetime import datetime, timedelta
 from pynput.keyboard import Key, Controller
 from data_types import Steering
-from blessings import Terminal
 import asyncio
+try:
+    from blessings import Terminal
+except:
+    pass
 
 SAMPLING_RATE = 30
 DEADZONE = 10
@@ -15,13 +18,15 @@ term = Terminal()
 class KeyboardOutput:
 
     def __init__(self) -> None:
-        print(term.clear)
+        if Terminal:
+            print(term.clear)
         self.keyboard = Controller()
         self.release_times = {}
         asyncio.create_task(self.check_key_up())
 
     def send_control(self, steering: Steering):
-        print(term.normal, term.move(0, 0), term.clear_eol, steering.forward, term.move(0, 8), steering.right)
+        if Terminal:
+            print(term.normal, term.move(0, 0), term.clear_eol, steering.forward, term.move(0, 8), steering.right)
         if steering.forward > DEADZONE:
             self.press('u', steering.forward * FORWARD_PRESS_TIME)
         if steering.forward < -DEADZONE:
@@ -39,11 +44,13 @@ class KeyboardOutput:
 
     async def check_key_up(self):
         while True:
-            print(term.move(0, 1))
+            if Terminal:
+                print(term.move(0, 1))
             for key in self.release_times.keys():
                 release_time = self.release_times[key]
                 if release_time is not None and release_time < datetime.now():
                     self.keyboard.release(key)
                     self.release_times[key] = None
-                print((term.on_blue if release_time else "") + f" {key} " + term.normal)
+                if Terminal:
+                    print((term.on_blue if release_time else "") + f" {key} " + term.normal)
             await asyncio.sleep(1 / 60)
