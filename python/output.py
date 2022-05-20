@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 from pynput.keyboard import Key, Controller
-from data_types import Steering
+from data_types import Steering, Game
 import asyncio
 try:
     from blessings import Terminal
@@ -10,15 +10,15 @@ except:
 
 SAMPLING_RATE = 30
 DEADZONE = 10
-ROTATION_PRESS_TIME = (1 / SAMPLING_RATE) * 1.0
-FORWARD_PRESS_TIME = (1 / SAMPLING_RATE) * 0.9
 
 
 class KeyboardOutput:
 
-    def __init__(self) -> None:
+    def __init__(self, game: Game) -> None:
         if term:
             print(term.clear)
+        self.rotation_press_time = (1 / SAMPLING_RATE) * 1.5 if game == Game.MARIO_KART_WII else 0.8
+        self.forward_press_time = (1 / SAMPLING_RATE) * 10 if game == Game.MARIO_KART_WII else 0.9
         self.keyboard = Controller()
         self.release_times = {}
         asyncio.create_task(self.check_key_up())
@@ -27,13 +27,13 @@ class KeyboardOutput:
         if term:
             print(term.normal, term.move(0, 0), term.clear_eol, steering.forward, term.move(0, 8), steering.right)
         if steering.forward > DEADZONE:
-            self.press('u', steering.forward * FORWARD_PRESS_TIME)
+            self.press('u', steering.forward * self.forward_press_time)
         if steering.forward < -DEADZONE:
-            self.press('a', -steering.forward * FORWARD_PRESS_TIME)
+            self.press('i', -steering.forward * self.forward_press_time)
         if steering.right > DEADZONE:
-            self.press(Key.right, steering.right * ROTATION_PRESS_TIME)
+            self.press(Key.right, steering.right * self.rotation_press_time)
         if steering.right < -DEADZONE:
-            self.press(Key.left, -steering.right * ROTATION_PRESS_TIME)
+            self.press(Key.left, -steering.right * self.rotation_press_time)
 
     def press(self, key: str, time: float):
         delta = timedelta(milliseconds=time)
