@@ -17,6 +17,7 @@ class KeyboardOutput:
     def __init__(self, game: Game) -> None:
         if term:
             print(term.clear)
+        self.game = game
         self.rotation_press_time = (1 / SAMPLING_RATE) * 1.5 if game == Game.MARIO_KART_WII else 0.8
         self.forward_press_time = (1 / SAMPLING_RATE) * 10 if game == Game.MARIO_KART_WII else 0.9
         self.keyboard = Controller()
@@ -29,7 +30,10 @@ class KeyboardOutput:
         if steering.forward > DEADZONE:
             self.press('u', steering.forward * self.forward_press_time)
         if steering.forward < -DEADZONE:
-            self.press('i', -steering.forward * self.forward_press_time)
+            time = -steering.forward * self.forward_press_time
+            if self.game == Game.MARIO_KART_64:
+                self.press('a', time)
+            self.press('i', time)
         if steering.right > DEADZONE:
             self.press(Key.right, steering.right * self.rotation_press_time)
         if steering.right < -DEADZONE:
